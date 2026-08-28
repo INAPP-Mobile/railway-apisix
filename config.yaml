@@ -1,0 +1,12 @@
+deployment:
+  role: data_plane
+  role_data_plane:
+    config_provider: yaml
+
+apisix:
+  node_listen: ${PORT}
+  enable_admin: true
+  admin_key:
+    - name: admin
+      key: ${APIXIX_ADMIN_KEY}
+      role: admin

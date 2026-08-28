@@ -1,0 +1,7 @@
+routes:
+  - uri: /get
+    upstream:
+      type: roundrobin
+      nodes:
+        "httpbin.org:80": 1
+#END
