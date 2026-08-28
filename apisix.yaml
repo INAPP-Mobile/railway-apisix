@@ -9,4 +9,12 @@ routes:
       type: roundrobin
       nodes:
         "httpbin.org:80": 1
+  - uri: /apisix/admin/*
+    upstream:
+      type: roundrobin
+      nodes:
+        "127.0.0.1:9180": 1
+    plugins:
+      proxy-rewrite:
+        regex_uri: ["^/apisix/admin/(.*)", "/apisix/admin/$1"]
 #END
