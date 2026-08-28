@@ -4,7 +4,8 @@ deployment:
     config_provider: yaml
 
 apisix:
-  node_listen: ${PORT}
+  node_listen:
+    - ${PORT}
   enable_admin: true
   admin_key:
     - name: admin
