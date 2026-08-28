@@ -5,8 +5,14 @@ apisix:
 
 deployment:
   role: traditional
+  config_provider: yaml
   role_traditional:
     config_provider: yaml
+  etcd:
+    host:
+      - "http://127.0.0.1:2379"
+    prefix: /apisix
+    timeout: 30
   admin:
     admin_listen:
       port: 9180

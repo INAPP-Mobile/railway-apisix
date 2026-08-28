@@ -5,10 +5,10 @@ routes:
         status_code: 200
         body: "ok"
   - uri: /get
-    upstream:
-      type: roundrobin
-      nodes:
-        "httpbin.org:80": 1
+    plugins:
+      response-rewrite:
+        status_code: 200
+        body: "ok"
   - uri: /apisix/admin/*
     upstream:
       type: roundrobin
