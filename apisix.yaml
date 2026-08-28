@@ -1,4 +1,9 @@
 routes:
+  - uri: /health
+    plugins:
+      response-rewrite:
+        status_code: 200
+        body: "ok"
   - uri: /get
     upstream:
       type: roundrobin
