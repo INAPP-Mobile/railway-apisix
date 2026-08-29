@@ -12,19 +12,17 @@ ETCD_PORT="${ETCD_PORT:-2379}"
 ADMIN_KEY="${APISIX_ADMIN_KEY:-}"
 
 echo "[apisix-entry] waiting for etcd at ${ETCD_HOST}:${ETCD_PORT} ..."
+echo "[apisix-entry] getent ahostsv4: $(getent ahostsv4 "${ETCD_HOST}" 2>&1 | tr '\n' ' ')"
+echo "[apisix-entry] getent hosts: $(getent hosts "${ETCD_HOST}" 2>&1 | tr '\n' ' ')"
 
-# /dev/tcp may pick IPv6 first while etcd listens on IPv4 only.
-# Resolve IPv4 address(es) explicitly and probe each.
 probe_ok() {
   local addr
-  # Prefer IPv4 addresses (getent ahostsv4); fall back to direct TCP probe
   for addr in $(getent ahostsv4 "${ETCD_HOST}" 2>/dev/null | awk '{print $1}' | sort -u); do
     if (exec 3<>/dev/tcp/${addr}/${ETCD_PORT}) 2>/dev/null; then
       exec 3>&- 3<&-
       return 0
     fi
   done
-  # Last resort: let bash try the hostname itself (may hit IPv6)
   if (exec 3<>/dev/tcp/${ETCD_HOST}/${ETCD_PORT}) 2>/dev/null; then
     exec 3>&- 3<&-
     return 0
@@ -44,6 +42,8 @@ done
 
 if [ "$READY" != "1" ]; then
   echo "[apisix-entry] ERROR: etcd not reachable after 120s, aborting"
+  echo "[apisix-entry] final getent ahostsv4: $(getent ahostsv4 "${ETCD_HOST}" 2>&1 | tr '\n' ' ')"
+  echo "[apisix-entry] final getent hosts: $(getent hosts "${ETCD_HOST}" 2>&1 | tr '\n' ' ')"
   exit 1
 fi
 
