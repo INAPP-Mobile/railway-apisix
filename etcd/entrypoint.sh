@@ -1,29 +1,26 @@
 #!/bin/bash
-# etcd entrypoint: start etcd DIRECTLY (bypass bitnami wrappers; their setup.sh
-# runs a validation etcd that starts+closes, which breaks background/wait flows),
-# wait for readiness, seed APISIX bootstrap routes, then keep etcd in foreground.
+# etcd entrypoint: start etcd DIRECTLY (bypass bitnami wrapper setup.sh which
+# runs a validation etcd that starts+closes), wait for readiness, seed APISIX
+# bootstrap routes, then keep etcd in foreground.
 #
-# ETCD_ADVERTISE_CLIENT_URLS is set via the template editor:
-#   value: http://${{RAILWAY_PRIVATE_DOMAIN}}:2379
+# Config comes from env vars (bitnami image style):
+#   ETCD_ADVERTISE_CLIENT_URLS  <- http://${{RAILWAY_PRIVATE_DOMAIN}}:2379 (template)
+#   ETCD_DATA_DIR, ETCD_LISTEN_CLIENT_URLS, ... defaults from image env
+#
+# NOTE: do NOT pass --advertise-client-urls as a flag — etcd exits with
+# "conflicting environment variable is shadowed" when ETCD_ADVERTISE_CLIENT_URLS
+# is also set. The env var is the source of truth.
 
 set -e
 
-DATA_DIR="${ETCD_DATA_DIR:-/bitnami/etcd/data}"
+echo "[etcd-entry] starting etcd directly (env-driven)"
+echo "[etcd-entry] ETCD_ADVERTISE_CLIENT_URLS=${ETCD_ADVERTISE_CLIENT_URLS:-<unset>}"
+echo "[etcd-entry] ETCD_LISTEN_CLIENT_URLS=${ETCD_LISTEN_CLIENT_URLS:-<unset>}"
+echo "[etcd-entry] ETCD_DATA_DIR=${ETCD_DATA_DIR:-<unset>}"
 
-echo "[etcd-entry] starting etcd directly: data-dir=${DATA_DIR} advertise=${ETCD_ADVERTISE_CLIENT_URLS:-http://127.0.0.1:2379}"
-
-# Run etcd binary directly in background — no bitnami wrapper that closes the
-# server during its setup phase.
-/opt/bitnami/etcd/bin/etcd \
-  --name=default \
-  --data-dir="$DATA_DIR" \
-  --listen-client-urls=http://0.0.0.0:2379 \
-  --advertise-client-urls="${ETCD_ADVERTISE_CLIENT_URLS:-http://127.0.0.1:2379}" \
-  --listen-peer-urls=http://localhost:2380 \
-  --initial-advertise-peer-urls=http://localhost:2380 \
-  --initial-cluster=default=http://localhost:2380 \
-  --log-level=info \
-  &
+# Run etcd binary directly in background with no CLI flags — all config derives
+# from ETCD_* env vars (image defaults: listen 0.0.0.0:2379, single-node).
+/opt/bitnami/etcd/bin/etcd &
 ETCD_PID=$!
 
 # Wait for etcd to be ready (max 120s) using loopback — we are etcd.
