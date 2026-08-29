@@ -31,11 +31,15 @@ chmod 700 /bitnami/etcd/data
 (
   export ETCDCTL_ENDPOINTS="http://127.0.0.1:2379"
   SEEDED=0
+  SEED_ERR=/tmp/seed-err.log
   for i in $(seq 1 180); do
-    if /opt/bitnami/etcd/bin/etcdctl --endpoints="${ETCDCTL_ENDPOINTS}" endpoint health >/dev/null 2>&1; then
+    if /opt/bitnami/etcd/bin/etcdctl --endpoints="${ETCDCTL_ENDPOINTS}" endpoint health >/dev/null 2>"$SEED_ERR"; then
       echo "[seed] etcd is healthy (after ${i}s)"
       SEEDED=1
       break
+    fi
+    if [ $((i % 20)) -eq 0 ]; then
+      echo "[seed] attempt ${i} still failing; last err: $(head -c 300 "$SEED_ERR" 2>/dev/null | tr '\n' ' ')"
     fi
     sleep 1
   done
