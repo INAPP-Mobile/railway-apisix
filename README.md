@@ -4,9 +4,9 @@ Apache APISIX is a cloud-native microservices API gateway. This template deploys
 
 ## Features
 
-- **Standalone mode** — no etcd required, routes loaded from apisix.yaml
+- **Standalone mode** — no etcd required, routes loaded from `apisix.yaml`
 - **Single container** — lower memory usage, faster deploys, higher health score
-- **Admin API** — manage routes, plugins, and upstreams via REST API
+- **Declarative routing** — edit `apisix.yaml` and redeploy to change routes
 - **Pay-per-call ready** — integrate with x402 for monetized API access
 
 ## Deploy
@@ -17,30 +17,31 @@ Apache APISIX is a cloud-native microservices API gateway. This template deploys
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `APIXIX_ADMIN_KEY` | Admin API key for route management | `edd1c9f034335f136f87ad84b625c8f1` |
 | `PORT` | Port APISIX listens on | `9080` |
 
 ## Usage
 
-After deploy, access the demo route:
+After deploy, the gateway answers on every path:
 
 ```bash
-curl https://xxx.up.railway.app/get
+curl https://xxx.up.railway.app/
+# ok
+
+curl https://xxx.up.railway.app/health
+# ok
 ```
 
-Add a new route via the admin API:
+### Adding routes
 
-```bash
-curl https://xxx.up.railway.app/apisix/admin/routes \
-  -H "X-API-KEY: $APIXIX_ADMIN_KEY" \
-  -X POST \
-  -d '{
-    "uri": "/hello",
-    "upstream": {
-      "type": "roundrobin",
-      "nodes": {"httpbin.org:80": 1}
-    }
-  }'
+Edit `apisix.yaml` in this repo and redeploy. For example, to proxy `/api` to a backend service:
+
+```yaml
+routes:
+  - uri: /api/*
+    upstream:
+      type: roundrobin
+      nodes:
+        "httpbin.org:80": 1
 ```
 
 ## License

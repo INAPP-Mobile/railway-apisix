@@ -2,7 +2,7 @@
   "build": { "builder": "dockerfile" },
   "deploy": {
     "startCommand": "/docker-entrypoint.sh docker-start",
-    "healthcheckPath": "/get",
+    "healthcheckPath": "/health",
     "healthcheckTimeout": 300,
     "restartPolicyType": "on_failure"
   }

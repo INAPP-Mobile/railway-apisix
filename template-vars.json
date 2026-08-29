@@ -1,8 +1,4 @@
 {
-  "APIXIX_ADMIN_KEY": {
-    "description": "Admin API key for APISIX dashboard and admin API",
-    "default": "edd1c9f034335f136f87ad84b625c8f1"
-  },
   "PORT": {
     "description": "Port APISIX listens on (Railway injects this)",
     "default": "9080"

@@ -4,17 +4,9 @@ routes:
       response-rewrite:
         status_code: 200
         body: "ok"
-  - uri: /get
+  - uri: /*
     plugins:
       response-rewrite:
         status_code: 200
         body: "ok"
-  - uri: /apisix/admin/*
-    upstream:
-      type: roundrobin
-      nodes:
-        "127.0.0.1:9180": 1
-    plugins:
-      proxy-rewrite:
-        regex_uri: ["^/apisix/admin/(.*)", "/apisix/admin/$1"]
 #END
