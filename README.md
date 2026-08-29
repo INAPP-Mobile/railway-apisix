@@ -11,7 +11,7 @@ Apache APISIX is a cloud-native microservices API gateway. This template deploys
 
 ## Deploy
 
-[![Deploy to Railway](https://railway.app/button.svg)](https://railway.com/deploy/apisix)
+[![Deploy to Railway](https://railway.app/button.svg)](https://railway.com/deploy/hCgTos)
 
 ## Configuration
 
