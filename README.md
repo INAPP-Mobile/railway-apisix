@@ -1,8 +1,8 @@
 # Apache APISIX — Railway Deployment Template
 
-> **Cloud-native microservices API gateway.** Standalone mode on Railway — no etcd dependency, single container, routes loaded from a local YAML file.
+> **Cloud-native microservices API gateway with admin dashboard.** APISIX + etcd companion on Railway — full Admin API and dashboard included.
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.com/deploy/hCgTos)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.com/deploy/apisix)
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-INAPP--Mobile%2Frailway--apisix-181717?style=flat-square&logo=github)](https://github.com/INAPP-Mobile/railway-apisix)
 [![APISIX](https://img.shields.io/badge/APISIX-Apache-2.0-blue?style=flat-square)](https://github.com/apache/apisix)
@@ -12,25 +12,25 @@
 
 # Deploy and Host
 
-Deploy Apache APISIX on Railway in one click. This template provisions a single container running the APISIX gateway in standalone mode (`data_plane` + `config_provider: yaml`) — routes are declared in `apisix.yaml`, no etcd cluster required. SSL is handled automatically by Railway.
+Deploy Apache APISIX on Railway in one click. This template provisions APISIX with an etcd companion service — the full Admin API and dashboard are available out of the box. SSL is handled automatically by Railway.
 
 ## About Hosting
 
-This template runs APISIX v3.18.0 inside a single Railway container:
+This template runs two services:
 
-- **APISIX Gateway** listens on port 9080 and serves routes declared in `apisix.yaml`
-- **Standalone mode** — routes load from the local YAML file at boot; edit and redeploy to change routing
-- **No etcd** — no external dependency, lower memory usage, faster deploys
+- **APISIX Gateway** (port 9080) — routes, plugins, and rate limits
+- **etcd** (port 2379, private network) — configuration store backing the Admin API
+- **Admin API + Dashboard** (port 9180) — manage routes via REST API or the web UI at `/ui`
 - **Health endpoint** — `/health` returns 200 for Railway healthchecks
 
 ## Why Deploy
 
-APISIX is a top-tier open-source API gateway (CNCF project) used by companies like Verizon, Robinhood, and Wipro. Self-hosting gives you full control over your routing, plugins, and rate limits — with a single-container footprint on Railway and no infrastructure to manage.
+APISIX is a top-tier open-source API gateway (CNCF project) used by companies like Verizon, Robinhood, and Wipro. Unlike the standalone variant, this template ships the full admin experience — create routes, manage plugins, and monitor traffic from the dashboard, with etcd as the durable config store.
 
 ## Common Use Cases
 
 - **API gateway** — route, rate-limit, and authenticate traffic to your microservices
-- **Reverse proxy** — expose internal services with path-based routing
+- **Admin dashboard** — manage routes and plugins from the web UI at `/ui`
 - **Plugin playground** — key-auth, JWT, rate limiting, CORS, and 80+ plugins
 - **Pay-per-call API** — pair with x402 for monetized API access
 
@@ -43,6 +43,7 @@ APISIX is a top-tier open-source API gateway (CNCF project) used by companies li
 | Dependency | Version/Type | Purpose                              |
 |------------|--------------|--------------------------------------|
 | APISIX     | 3.18.0       | API gateway (OpenResty-based)        |
+| etcd       | 3.5.11       | Configuration store for Admin API    |
 | OpenResty  | bundled      | Nginx runtime for APISIX             |
 | LuaJIT     | bundled      | Plugin execution engine              |
 
@@ -52,14 +53,15 @@ APISIX is a top-tier open-source API gateway (CNCF project) used by companies li
 |-------------------|----------------------------------------|
 | Docker            | Container runtime (managed by Railway) |
 | Railway           | Hosting platform                       |
+| Railway Volume    | Persistent storage for etcd data       |
 
 ---
 
 ## ✨ Features
 
-- **Standalone mode** — no etcd required, routes loaded from `apisix.yaml`
-- **Single container** — lower memory usage, faster deploys, higher health score
-- **Declarative routing** — edit `apisix.yaml` and redeploy to change routes
+- **Admin API + Dashboard** — full route management at `/ui` and `/apisix/admin/*`
+- **etcd companion** — durable config store, auto-provisioned
+- **Declarative or dynamic routing** — create routes via API/dashboard, or preload in etcd
 - **Pay-per-call ready** — integrate with x402 for monetized API access
 
 ---
@@ -68,7 +70,7 @@ APISIX is a top-tier open-source API gateway (CNCF project) used by companies li
 
 ### One-click Deploy
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.com/deploy/hCgTos)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.com/deploy/apisix)
 
 ### Manual Deploy
 
@@ -82,35 +84,43 @@ railway up
 
 ## ⚙️ Environment Variables
 
-| Variable | Required | Description                          |
-|----------|----------|--------------------------------------|
-| `PORT`   | ✅ Yes   | Port APISIX listens on (default `9080`) |
+| Variable          | Required | Description                                        |
+|-------------------|----------|----------------------------------------------------|
+| `PORT`            | ✅ Yes   | Port APISIX listens on (default `9080`)            |
+| `APISIX_ADMIN_KEY`| ✅ Yes   | Admin API key. Must match `config.yaml`.           |
 
 ---
 
 ## 📡 Usage
 
-After deploy, the gateway answers on every path:
+### Dashboard
+
+Open `https://your-app.up.railway.app/ui` and sign in with the admin key.
+
+### Admin API
 
 ```bash
-curl https://xxx.up.railway.app/
-# ok
+# List routes
+curl https://your-app.up.railway.app/apisix/admin/routes \
+  -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1"
 
-curl https://xxx.up.railway.app/health
-# ok
+# Create a route proxying to a backend
+curl -X PUT https://your-app.up.railway.app/apisix/admin/routes/hello \
+  -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "uri": "/hello",
+    "upstream": {
+      "type": "roundrobin",
+      "nodes": {"httpbin.org:80": 1}
+    }
+  }'
 ```
 
-### Adding routes
+### Gateway
 
-Edit `apisix.yaml` in this repo and redeploy. For example, to proxy `/api` to a backend service:
-
-```yaml
-routes:
-  - uri: /api/*
-    upstream:
-      type: roundrobin
-      nodes:
-        "httpbin.org:80": 1
+```bash
+curl https://your-app.up.railway.app/hello
 ```
 
 ---
