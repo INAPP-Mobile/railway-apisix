@@ -12,8 +12,6 @@ ETCD_PORT="${ETCD_PORT:-2379}"
 ADMIN_KEY="${APISIX_ADMIN_KEY:-}"
 
 echo "[apisix-entry] waiting for etcd at ${ETCD_HOST}:${ETCD_PORT} ..."
-echo "[apisix-entry] getent ahostsv4: $(getent ahostsv4 "${ETCD_HOST}" 2>&1 | tr '\n' ' ')"
-echo "[apisix-entry] getent hosts: $(getent hosts "${ETCD_HOST}" 2>&1 | tr '\n' ' ')"
 
 probe_ok() {
   local addr
@@ -42,8 +40,6 @@ done
 
 if [ "$READY" != "1" ]; then
   echo "[apisix-entry] ERROR: etcd not reachable after 120s, aborting"
-  echo "[apisix-entry] final getent ahostsv4: $(getent ahostsv4 "${ETCD_HOST}" 2>&1 | tr '\n' ' ')"
-  echo "[apisix-entry] final getent hosts: $(getent hosts "${ETCD_HOST}" 2>&1 | tr '\n' ' ')"
   exit 1
 fi
 
