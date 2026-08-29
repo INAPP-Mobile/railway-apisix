@@ -1,7 +1,13 @@
 apisix:
+  proxy_mode: http&stream
   node_listen:
     - port: 9080
   enable_admin: true
+  stream_proxy:
+    tcp:
+      - 9100
+    udp:
+      - 9200
 
 deployment:
   role: traditional
