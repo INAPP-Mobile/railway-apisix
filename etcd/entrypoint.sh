@@ -6,6 +6,10 @@
 # created, unpredictable UID) that can't match the volume chown; it also
 # regenerates conf from ETCD_CFG_* vars. Direct root run is deterministic.
 #
+# NOTE on etcdctl: it FATALS on "conflicting environment variable is shadowed
+# by command-line flag" when BOTH ETCDCTL_ENDPOINTS env and --endpoints flag are
+# set. Use the env var ONLY (never also pass --endpoints).
+#
 # ETCD_ADVERTISE_CLIENT_URLS is set via the template editor:
 #   value: http://${{RAILWAY_PRIVATE_DOMAIN}}:2379
 
@@ -31,15 +35,11 @@ chmod 700 /bitnami/etcd/data
 (
   export ETCDCTL_ENDPOINTS="http://127.0.0.1:2379"
   SEEDED=0
-  SEED_ERR=/tmp/seed-err.log
   for i in $(seq 1 180); do
-    if /opt/bitnami/etcd/bin/etcdctl --endpoints="${ETCDCTL_ENDPOINTS}" endpoint health >/dev/null 2>"$SEED_ERR"; then
+    if /opt/bitnami/etcd/bin/etcdctl endpoint health >/dev/null 2>&1; then
       echo "[seed] etcd is healthy (after ${i}s)"
       SEEDED=1
       break
-    fi
-    if [ $((i % 20)) -eq 0 ]; then
-      echo "[seed] attempt ${i} still failing; last err: $(head -c 300 "$SEED_ERR" 2>/dev/null | tr '\n' ' ')"
     fi
     sleep 1
   done
@@ -48,9 +48,9 @@ chmod 700 /bitnami/etcd/data
     echo "[seed] seeding APISIX bootstrap routes (idempotent)"
     seed_route() {
       local id="$1" body="$2"
-      if ! /opt/bitnami/etcd/bin/etcdctl --endpoints="${ETCDCTL_ENDPOINTS}" get "/apisix/routes/$id" --print-value-only 2>/dev/null | grep -q .; then
+      if ! /opt/bitnami/etcd/bin/etcdctl get "/apisix/routes/$id" --print-value-only 2>/dev/null | grep -q .; then
         echo "[seed] creating route $id"
-        /opt/bitnami/etcd/bin/etcdctl --endpoints="${ETCDCTL_ENDPOINTS}" put "/apisix/routes/$id" "$body" >/dev/null
+        /opt/bitnami/etcd/bin/etcdctl put "/apisix/routes/$id" "$body" >/dev/null
       else
         echo "[seed] route $id exists, skipping"
       fi
