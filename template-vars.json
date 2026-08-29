@@ -1,10 +1,14 @@
 {
+  "ETCD_HOST": {
+    "description": "etcd sibling service private hostname (auto-resolved)",
+    "default": "${{etcd.RAILWAY_PRIVATE_DOMAIN}}"
+  },
+  "APISIX_ADMIN_KEY": {
+    "description": "Admin API key for dashboard and admin API (auto-generated)",
+    "default": "${{secret(32)}}"
+  },
   "PORT": {
     "description": "Port APISIX listens on (Railway injects this)",
     "default": "9080"
-  },
-  "APISIX_ADMIN_KEY": {
-    "description": "Admin API key for the APISIX admin API and dashboard. Must match the key in config.yaml.",
-    "default": "edd1c9f034335f136f87ad84b625c8f1"
   }
 }

@@ -1,7 +1,11 @@
 {
+  "ETCD_HOST": {
+    "value": "${{etcd.RAILWAY_PRIVATE_DOMAIN}}",
+    "description": "etcd sibling service private hostname. Resolved from the etcd service at deploy time."
+  },
   "APISIX_ADMIN_KEY": {
-    "value": "edd1c9f034335f136f87ad84b625c8f1",
-    "description": "Admin API key for the APISIX admin API and dashboard. Must match the key in config.yaml. Change both together if updating."
+    "value": "${{secret(32)}}",
+    "description": "Admin API key for the APISIX admin API and dashboard. Auto-generated on first deploy."
   },
   "PORT": {
     "value": "9080",

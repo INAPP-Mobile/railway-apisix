@@ -1,13 +1,22 @@
 #!/bin/bash
-# etcd entrypoint: let the bitnami wrapper handle perms/loop/single-node (it
-# chowns the volume, sets ETCD_DATA_DIR=/bitnami/etcd/data, drops privileges),
-# while a detached background subshell seeds APISIX bootstrap routes once etcd
-# is ready.
+# etcd entrypoint: chown the volume (we run as root; bitnami runs as UID 1001),
+# then let the bitnami wrapper handle setup + run as the daemon user in
+# foreground, while a detached background subshell seeds APISIX bootstrap routes
+# once etcd is ready.
 #
 # ETCD_ADVERTISE_CLIENT_URLS is set via the template editor:
 #   value: http://${{RAILWAY_PRIVATE_DOMAIN}}:2379
 
 set -e
+
+ETCD_DAEMON_USER="${ETCD_DAEMON_USER:-1001}"
+
+# Railway bind-mounts the volume root-owned; bitnami runs as UID 1001
+# (non-root), so it cannot write /bitnami/etcd/data. Fix ownership up front.
+echo "[etcd-entry] ensuring /bitnami/etcd is owned by UID ${ETCD_DAEMON_USER}"
+mkdir -p /bitnami/etcd/data
+chown -R "${ETCD_DAEMON_USER}:0" /bitnami/etcd
+chmod -R g+w /bitnami/etcd
 
 # --- Seeder (detached; wrapper runs foreground below) -------------------------
 (
@@ -44,8 +53,7 @@ set -e
 ) &
 
 # The bitnami wrapper (foreground, replaces this shell via exec) handles:
-#   - volume ownership/permissions for /bitnami/etcd
-#   - ETCD_DATA_DIR=/bitnami/etcd/data
-#   - dropping from root to the etcd user
-#   - starting etcd (setup validation + real run) and keeping it in foreground
+#   - single-node defaults, extra env → conf file
+#   - dropping from root to the daemon user for the etcd process
+#   - keeping etcd in foreground
 exec /opt/bitnami/scripts/etcd/entrypoint.sh /opt/bitnami/scripts/etcd/run.sh

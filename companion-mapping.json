@@ -1,5 +1,5 @@
 {
   "etcd": {
-    "ETCD_ADVERTISE_CLIENT_URLS": "http://etcd.railway.internal:2379"
+    "RAILWAY_PRIVATE_DOMAIN": "etcd.railway.internal"
   }
 }

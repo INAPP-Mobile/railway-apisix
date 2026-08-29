@@ -1,6 +1,6 @@
 {
   "ETCD_ADVERTISE_CLIENT_URLS": {
-    "value": "http://etcd.railway.internal:2379",
-    "description": "Client URL APISIX connects to. Uses the etcd service name on the Railway private network."
+    "value": "http://${{RAILWAY_PRIVATE_DOMAIN}}:2379",
+    "description": "Client URL APISIX connects to. Resolved from this service's own private domain."
   }
 }
