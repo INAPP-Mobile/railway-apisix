@@ -1,37 +1,33 @@
 #!/bin/bash
-# etcd entrypoint: render config from template (dynamic advertise URL), chown
-# the volume, then let the bitnami wrapper generate the real etcd.yaml, drop to
-# UID 1001, and run etcd in foreground. A detached subshell seeds APISIX routes.
+# etcd entrypoint: render config from template (dynamic advertise URL), ensure
+# the volume exists, then run etcd DIRECTLY as root with --config-file.
+#
+# Why not the bitnami wrapper: it drops to a daemon user ("etcd", dynamically
+# created, unpredictable UID) that can't match the volume chown; it also
+# regenerates conf from ETCD_CFG_* vars. Direct root run is deterministic.
 #
 # ETCD_ADVERTISE_CLIENT_URLS is set via the template editor:
 #   value: http://${{RAILWAY_PRIVATE_DOMAIN}}:2379
 
 set -euo pipefail
 
-ETCD_DAEMON_USER="${ETCD_DAEMON_USER:-1001}"
 CONF_DIR="${ETCD_CONF_DIR:-/opt/bitnami/etcd/conf}"
 CONF_FILE="${ETCD_CONF_FILE:-${CONF_DIR}/etcd.yaml}"
-TMPL="/opt/bitnami/etcd/conf/etcd.yaml.tmpl"
+TMPL="${CONF_DIR}/etcd.yaml.tmpl"
 
-# The bitnami wrapper only creates etcd.yaml if ETCD_CFG_* vars exist AND the
-# file already exists (etcd_conf_write uses `[[ -f ]]` guard + yq on the file).
-# So we pre-create a templated conf with the dynamic advertise URL, letting the
-# wrapper's run.sh pick it up via --config-file.
 ADVERTISE_URL="${ETCD_ADVERTISE_CLIENT_URLS:-http://127.0.0.1:2379}"
 if [ -f "$TMPL" ]; then
   sed "s|__ADVERTISE_URL__|${ADVERTISE_URL}|g" "$TMPL" > "$CONF_FILE"
   echo "[etcd-entry] rendered $CONF_FILE with advertise-url=${ADVERTISE_URL}"
 else
-  echo "[etcd-entry] WARNING: $TMPL missing; not pre-creating conf"
+  echo "[etcd-entry] WARNING: $TMPL missing; keeping existing conf"
 fi
 
-# Railway bind-mounts the volume root-owned; bitnami drops to UID 1001, so fix
-# ownership up front (we run as root via Dockerfile USER root).
-echo "[etcd-entry] ensuring /bitnami/etcd/data is owned by UID ${ETCD_DAEMON_USER}"
+# Railway volume may be fresh/empty; ensure the data dir exists (we run as root).
 mkdir -p /bitnami/etcd/data
-chown -R "${ETCD_DAEMON_USER}:0" /bitnami/etcd
+chmod 700 /bitnami/etcd/data
 
-# --- Seeder (detached; wrapper runs foreground below) -------------------------
+# --- Seeder (detached) ---
 (
   export ETCDCTL_ENDPOINTS="http://127.0.0.1:2379"
   SEEDED=0
@@ -65,7 +61,6 @@ chown -R "${ETCD_DAEMON_USER}:0" /bitnami/etcd
   fi
 ) &
 
-# The bitnami wrapper (foreground, replaces this shell via exec):
-#   - generates the real etcd.yaml (writes initial-cluster via yq)
-#   - drops from root to UID 1001 and execs etcd --config-file
-exec /opt/bitnami/scripts/etcd/entrypoint.sh /opt/bitnami/scripts/etcd/run.sh
+# Run etcd directly (foreground). Removes container-user drop issues entirely.
+echo "[etcd-entry] starting etcd (root) with --config-file ${CONF_FILE}"
+exec /opt/bitnami/etcd/bin/etcd --config-file "$CONF_FILE"
