@@ -19,6 +19,7 @@ Deploy Apache APISIX on Railway in one click. This template provisions APISIX wi
 This template runs two services:
 
 - **APISIX Gateway** (port 9080) — routes, plugins, and rate limits
+- **Stream proxy** (TCP 9100, UDP 9200) — L4 TCP/UDP proxying, managed from the dashboard's Stream section
 - **etcd** (port 2379, private network) — configuration store backing the Admin API
 - **Admin API + Dashboard** (port 9180) — manage routes via REST API or the web UI at `/ui`
 - **Health endpoint** — `/health` returns 200 for Railway healthchecks
