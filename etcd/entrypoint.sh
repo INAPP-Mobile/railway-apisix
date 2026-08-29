@@ -22,7 +22,6 @@ echo "[etcd-entry] starting etcd directly: data-dir=${DATA_DIR} advertise=${ETCD
   --listen-peer-urls=http://localhost:2380 \
   --initial-advertise-peer-urls=http://localhost:2380 \
   --initial-cluster=default=http://localhost:2380 \
-  --log-all=info \
   --log-level=info \
   &
 ETCD_PID=$!
