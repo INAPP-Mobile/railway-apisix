@@ -3,23 +3,34 @@
 # runs a validation etcd that starts+closes), wait for readiness, seed APISIX
 # bootstrap routes, then keep etcd in foreground.
 #
-# Config comes from env vars (bitnami image style):
-#   ETCD_ADVERTISE_CLIENT_URLS  <- http://${{RAILWAY_PRIVATE_DOMAIN}}:2379 (template)
-#   ETCD_DATA_DIR, ETCD_LISTEN_CLIENT_URLS, ... defaults from image env
+# Config via env vars (bitnami image style). Template sets:
+#   ETCD_ADVERTISE_CLIENT_URLS  <- http://${{RAILWAY_PRIVATE_DOMAIN}}:2379
+# We must set the rest here because the bitnami run.sh (which normally exports
+# them) is bypassed:
+#   ETCD_DATA_DIR            <- /bitnami/etcd/data (volume, writable; the
+#                               CWD-relative default.etcd is NOT writable →
+#                               "cannot access data directory: permission denied")
+#   ETCD_LISTEN_CLIENT_URLS  <- http://0.0.0.0:2379 (else image default listens
+#                               on localhost only and the private network
+#                               cannot reach it)
 #
-# NOTE: do NOT pass --advertise-client-urls as a flag — etcd exits with
+# Do NOT pass --advertise-client-urls as a flag: etcd exits with
 # "conflicting environment variable is shadowed" when ETCD_ADVERTISE_CLIENT_URLS
-# is also set. The env var is the source of truth.
+# is also set.
 
 set -e
 
+export ETCD_DATA_DIR="${ETCD_DATA_DIR:-/bitnami/etcd/data}"
+export ETCD_LISTEN_CLIENT_URLS="${ETCD_LISTEN_CLIENT_URLS:-http://0.0.0.0:2379}"
+export ETCD_INITIAL_CLUSTER_STATE="${ETCD_INITIAL_CLUSTER_STATE:-new}"
+
 echo "[etcd-entry] starting etcd directly (env-driven)"
 echo "[etcd-entry] ETCD_ADVERTISE_CLIENT_URLS=${ETCD_ADVERTISE_CLIENT_URLS:-<unset>}"
-echo "[etcd-entry] ETCD_LISTEN_CLIENT_URLS=${ETCD_LISTEN_CLIENT_URLS:-<unset>}"
-echo "[etcd-entry] ETCD_DATA_DIR=${ETCD_DATA_DIR:-<unset>}"
+echo "[etcd-entry] ETCD_LISTEN_CLIENT_URLS=${ETCD_LISTEN_CLIENT_URLS}"
+echo "[etcd-entry] ETCD_DATA_DIR=${ETCD_DATA_DIR}"
 
 # Run etcd binary directly in background with no CLI flags — all config derives
-# from ETCD_* env vars (image defaults: listen 0.0.0.0:2379, single-node).
+# from ETCD_* env vars.
 /opt/bitnami/etcd/bin/etcd &
 ETCD_PID=$!
 
