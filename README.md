@@ -2,7 +2,7 @@
 
 > **Cloud-native microservices API gateway with admin dashboard.** APISIX + etcd companion on Railway — full Admin API and dashboard included.
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.com/deploy/apisix)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.com/deploy/apisix-1)
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-INAPP--Mobile%2Frailway--apisix-181717?style=flat-square&logo=github)](https://github.com/INAPP-Mobile/railway-apisix)
 [![APISIX](https://img.shields.io/badge/APISIX-Apache-2.0-blue?style=flat-square)](https://github.com/apache/apisix)
@@ -71,7 +71,7 @@ APISIX is a top-tier open-source API gateway (CNCF project) used by companies li
 
 ### One-click Deploy
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.com/deploy/apisix)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.com/deploy/apisix-1)
 
 ### Manual Deploy
 
