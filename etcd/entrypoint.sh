@@ -1,22 +1,35 @@
 #!/bin/bash
-# etcd entrypoint: chown the volume (we run as root; bitnami runs as UID 1001),
-# then let the bitnami wrapper handle setup + run as the daemon user in
-# foreground, while a detached background subshell seeds APISIX bootstrap routes
-# once etcd is ready.
+# etcd entrypoint: render config from template (dynamic advertise URL), chown
+# the volume, then let the bitnami wrapper generate the real etcd.yaml, drop to
+# UID 1001, and run etcd in foreground. A detached subshell seeds APISIX routes.
 #
 # ETCD_ADVERTISE_CLIENT_URLS is set via the template editor:
 #   value: http://${{RAILWAY_PRIVATE_DOMAIN}}:2379
 
-set -e
+set -euo pipefail
 
 ETCD_DAEMON_USER="${ETCD_DAEMON_USER:-1001}"
+CONF_DIR="${ETCD_CONF_DIR:-/opt/bitnami/etcd/conf}"
+CONF_FILE="${ETCD_CONF_FILE:-${CONF_DIR}/etcd.yaml}"
+TMPL="/opt/bitnami/etcd/conf/etcd.yaml.tmpl"
 
-# Railway bind-mounts the volume root-owned; bitnami runs as UID 1001
-# (non-root), so it cannot write /bitnami/etcd/data. Fix ownership up front.
-echo "[etcd-entry] ensuring /bitnami/etcd is owned by UID ${ETCD_DAEMON_USER}"
+# The bitnami wrapper only creates etcd.yaml if ETCD_CFG_* vars exist AND the
+# file already exists (etcd_conf_write uses `[[ -f ]]` guard + yq on the file).
+# So we pre-create a templated conf with the dynamic advertise URL, letting the
+# wrapper's run.sh pick it up via --config-file.
+ADVERTISE_URL="${ETCD_ADVERTISE_CLIENT_URLS:-http://127.0.0.1:2379}"
+if [ -f "$TMPL" ]; then
+  sed "s|__ADVERTISE_URL__|${ADVERTISE_URL}|g" "$TMPL" > "$CONF_FILE"
+  echo "[etcd-entry] rendered $CONF_FILE with advertise-url=${ADVERTISE_URL}"
+else
+  echo "[etcd-entry] WARNING: $TMPL missing; not pre-creating conf"
+fi
+
+# Railway bind-mounts the volume root-owned; bitnami drops to UID 1001, so fix
+# ownership up front (we run as root via Dockerfile USER root).
+echo "[etcd-entry] ensuring /bitnami/etcd/data is owned by UID ${ETCD_DAEMON_USER}"
 mkdir -p /bitnami/etcd/data
 chown -R "${ETCD_DAEMON_USER}:0" /bitnami/etcd
-chmod -R g+w /bitnami/etcd
 
 # --- Seeder (detached; wrapper runs foreground below) -------------------------
 (
@@ -52,8 +65,7 @@ chmod -R g+w /bitnami/etcd
   fi
 ) &
 
-# The bitnami wrapper (foreground, replaces this shell via exec) handles:
-#   - single-node defaults, extra env → conf file
-#   - dropping from root to the daemon user for the etcd process
-#   - keeping etcd in foreground
+# The bitnami wrapper (foreground, replaces this shell via exec):
+#   - generates the real etcd.yaml (writes initial-cluster via yq)
+#   - drops from root to UID 1001 and execs etcd --config-file
 exec /opt/bitnami/scripts/etcd/entrypoint.sh /opt/bitnami/scripts/etcd/run.sh
